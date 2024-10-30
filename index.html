@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6x6 Grid Clickable Boxes</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* Full viewport height */
+            margin: 0;
+            background-color: #f4f4f4; /* Light background color */
+            font-family: Arial, sans-serif; /* Modern font */
+        }
+
+        h2 {
+            text-align: center;
+            color: #333; /* Dark text color */
+        }
+
+        /* Main grid styling */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(6, 60px);
+            grid-template-rows: repeat(6, 60px);
+            gap: 10px;
+        }
+
+        /* Styling for each box */
+        .box {
+            width: 60px;
+            height: 60px;
+            background-color: white;
+            border: 2px solid #ccc; /* Light border */
+            border-radius: 10px; /* Rounded corners */
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            display: flex; /* Flexbox for centering text */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            font-weight: bold; /* Make text bold */
+            color: #333; /* Text color */
+        }
+
+        /* When box is clicked, turn it black */
+        .box.clicked {
+            background-color: black;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); /* Darker shadow on click */
+        }
+
+        /* Styling for path boxes */
+        .path {
+            background-color: yellow; /* Yellow background for path */
+            box-shadow: none; /* Remove shadow for path boxes */
+        }
+    </style>
+</head>
+<body>
+
+<h2>Click on the boxes to turn them black!</h2>
+<div class="grid" id="grid"></div>
+<button id="findPath">Find Shortest Path</button>
+<p id="result"></p>
+<p id="pathLength"></p>
+
+<script>
+    const gridContainer = document.getElementById('grid');
+    const resultText = document.getElementById('result');
+    const pathLengthText = document.getElementById('pathLength');
+    const rows = 6;
+    const cols = 6;
+    let grid = [];
+
+    // Function to create a 6x6 grid of boxes
+    function createGrid(rows, cols) {
+        for (let i = 0; i < rows * cols; i++) {
+            const box = document.createElement('div');
+            box.classList.add('box');
+
+            // Add labels to the first and last boxes
+            if (i === 0) {
+                box.textContent = 'Start'; // Label for the top-left box
+            } else if (i === (rows * cols) - 1) {
+                box.textContent = 'End'; // Label for the bottom-right box
+            }
+
+            // Toggle 'clicked' class on click to change color
+            box.addEventListener('click', () => {
+                box.classList.toggle('clicked');
+            });
+
+            gridContainer.appendChild(box);
+            grid.push(box); // Store box references in the grid array
+        }
+    }
+
+    // BFS algorithm to find the shortest path
+    function bfs(start, end) {
+        const queue = [];
+        const visited = new Set();
+        const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]; // Down, Up, Right, Left
+        const parent = new Map(); // To store the path
+
+        // Start BFS from the starting position
+        queue.push(start);
+        visited.add(start.toString());
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+
+            // If we reached the end, reconstruct the path
+            if (current[0] === end[0] && current[1] === end[1]) {
+                const path = [];
+                let step = current;
+
+                while (step) {
+                    path.push(step);
+                    step = parent.get(step.toString());
+                }
+
+                return path.reverse(); // Return path in correct order
+            }
+
+            // Explore the four possible directions
+            for (const [dx, dy] of directions) {
+                const newX = current[0] + dx;
+                const newY = current[1] + dy;
+
+                // Check if the new position is within bounds and is a white cell
+                if (
+                    newX >= 0 && newX < rows &&
+                    newY >= 0 && newY < cols &&
+                    !visited.has([newX, newY].toString()) &&
+                    !grid[newX * cols + newY].classList.contains('clicked')
+                ) {
+                    // Mark new position as visited and set parent for path reconstruction
+                    visited.add([newX, newY].toString());
+                    parent.set([newX, newY].toString(), current);
+                    queue.push([newX, newY]); // Add new position to the queue
+                }
+            }
+        }
+
+        return null; // No path found
+    }
+
+    // Function to handle finding the path
+    function findShortestPath() {
+        const start = [0, 0]; // Top-left corner
+        const end = [rows - 1, cols - 1]; // Bottom-right corner
+
+        const path = bfs(start, end);
+
+        // Clear previous path colors and results
+        grid.forEach(box => {
+            box.classList.remove('path');
+        });
+        resultText.textContent = ''; // Clear previous result
+        pathLengthText.textContent = ''; // Clear previous path length
+
+        // Display the result
+        if (path) {
+            resultText.textContent = 'Shortest Path: ' + path.map(p => `(${p[0]}, ${p[1]})`).join(' -> ');
+            // Calculate and display the path length
+            const pathLength = path.length - 1; // Subtract 1 because length includes start
+            pathLengthText.textContent = 'Path Length: ' + pathLength;
+
+            // Highlight the path boxes
+            path.forEach(([x, y]) => {
+                const index = x * cols + y;
+                grid[index].classList.add('path');
+            });
+        } else {
+            resultText.textContent = 'Impossible to reach the end!';
+            pathLengthText.textContent = ''; // Clear path length if impossible
+        }
+    }
+
+    // Initialize the 6x6 grid
+    createGrid(rows, cols);
+
+    // Add event listener to the find path button
+    document.getElementById('findPath').addEventListener('click', findShortestPath);
+</script>
+
+</body>
+</html>
